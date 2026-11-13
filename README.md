@@ -2,7 +2,7 @@
 
 > Interactive simulations and concept notes for Class 10 Physics, Chemistry and Biology.
 
-**Live:** https://project-zero-lab.github.io/class10-science-virtual-lab/
+**Live:** https://project-zero-lab.github.io/science-virtual-lab/
 
 **Built by:** Chandan Joshi · Project Zero × Claylab Education Foundation (Cohort 1)
 
