@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Class 10 Science Virtual Lab</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-indigo-600 text-white px-4 py-3 flex justify-between items-center shadow-md z-30 flex-shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="bg-white/20 p-2 rounded-xl text-xl">🔬</div>
+            <div>
+                <h1 class="font-bold text-base sm:text-lg tracking-wide">Class 10 Science Virtual Lab</h1>
+                <p class="text-xs text-indigo-100 opacity-90">Interactive Working Models & Curriculum Notes</p>
+            </div>
+        </div>
+        <button id="menuToggle" class="bg-white/20 hover:bg-white/30 p-2.5 rounded-xl transition text-lg md:hidden">
+            ☰
+        </button>
+    </header>
+
+    <div class="flex-1 flex relative overflow-hidden">
+        <!-- Backdrop for Mobile Drawer -->
+        <div id="backdrop" class="absolute inset-0 bg-black/40 z-20 hidden md:hidden transition-opacity"></div>
+
+        <!-- Sliding Sidebar / Navigation Drawer -->
+        <aside id="sidebar" class="absolute md:relative top-0 bottom-0 left-0 w-72 bg-white border-r border-slate-200 flex flex-col z-30 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out shadow-lg md:shadow-none">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Select Lab Experiment</span>
+                <button id="closeSidebar" class="md:hidden text-slate-400 hover:text-slate-600 font-bold text-lg px-2">✕</button>
+            </div>
+            <div id="navList" class="flex-1 overflow-y-auto p-3 space-y-2">
+                <!-- Populated dynamically -->
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-slate-100">
+            <!-- Workspace Header Bar -->
+            <div class="bg-white px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 flex-shrink-0">
+                <div class="flex items-center space-x-3">
+                    <h2 id="mainTitle" class="font-bold text-lg text-slate-800">Magnetic Field</h2>
+                    <span id="mainBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">Physics</span>
+                </div>
+                <!-- View Mode Tabs -->
+                <div class="flex bg-slate-200 p-1 rounded-xl w-full sm:w-auto">
+                    <button id="simTab" class="flex-1 sm:flex-initial px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition">Simulation</button>
+                    <button id="notesTab" class="flex-1 sm:flex-initial px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition">Concept Notes</button>
+                </div>
+            </div>
+
+            <!-- Content Container -->
+            <div class="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col">
+                <!-- Simulation View -->
+                <div id="simView" class="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="relative flex-1 bg-slate-950 flex items-center justify-center min-h-[280px]">
+                        <canvas id="simCanvas" class="w-full h-full block"></canvas>
+                        <div id="instructionOverlay" class="absolute top-3 left-3 right-3 sm:right-auto sm:max-w-xs bg-slate-900/85 backdrop-blur border border-slate-700 text-slate-200 px-3 py-2 rounded-xl text-xs pointer-events-none">
+                            Touch & drag inside canvas to interact.
+                        </div>
+                    </div>
+                    <!-- Controls Bar -->
+                    <div id="controlsBar" class="p-4 bg-white border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Concept Notes View -->
+                <div id="notesView" class="hidden flex-1 max-w-3xl mx-auto w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 overflow-y-auto">
+                    <div id="notesContent">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Topic Database aligned with Class 10 NCERT Science Curriculum
+        const topics = [
+            {
+                id: 0,
+                title: "Magnetic Field of Bar Magnet",
+                badge: "Physics",
+                badgeClass: "bg-indigo-50 text-indigo-700",
+                icon: "🧲",
+                category: "Physics · Chapter 12",
+                instructions: "Touch & drag inside canvas to move the test compass needle or inspect iron filings alignment.",
+                notesTitle: "Magnetic Field & Field Lines",
+                notesSubtitle: "Class 10 Physics · Magnetic Effects of Electric Current",
+                notesHTML: `
+                    <h3 class="text-base font-bold text-slate-900 mb-2">What is a Magnetic Field?</h3>
+                    <p class="text-sm text-slate-600 mb-4">The region surrounding a magnet where magnetic force can be experienced is called a magnetic field. The line along which iron filings align themselves represents magnetic field lines.</p>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">Key Characteristics of Field Lines:</h4>
+                    <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1 mb-4">
+                        <li><strong>Direction:</strong> Magnetic field lines emerge from the North pole and merge at the South pole outside the magnet. Inside, they flow from South to North.</li>
+                        <li><strong>Continuous Closed Loops:</strong> Field lines do not end abruptly; they form continuous closed curves.</li>
+                        <li><strong>Field Strength:</strong> Field lines are crowded near the poles where the magnetic field is strongest and widely spaced where weaker.</li>
+                        <li><strong>No Intersection:</strong> Two magnetic field lines never intersect each other. If they did, the compass needle would point in two directions at the same point, which is impossible.</li>
+                    </ul>
+                `,
+                controlsHTML: `
+                    <div class="flex gap-2">
+                        <button onclick="setMagnetMode('filings')" id="btnFilings" class="px-3 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-sm transition">Iron Filings</button>
+                        <button onclick="setMagnetMode('compass')" id="btnCompass" class="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Test Compass</button>
+                    </div>
+                    <div class="flex flex-col gap-1 w-full sm:w-48">
+                        <div class="flex justify-between text-xs font-semibold text-slate-600">
+                            <span>Pole Strength:</span>
+                            <strong id="strengthLabel" class="text-indigo-600">Normal</strong>
+                        </div>
+                        <input type="range" min="1" max="3" value="2" step="1" oninput="changeMagnetStrength(this.value)" class="accent-indigo-600 cursor-pointer">
+                    </div>
+                `
+            },
+            {
+                id: 1,
+                title: "Refraction through Glass Slab",
+                badge: "Physics",
+                badgeClass: "bg-sky-50 text-sky-700",
+                icon: "💡",
+                category: "Physics · Chapter 10",
+                instructions: "Adjust the incidence angle or refractive index to observe light bending and lateral displacement.",
+                notesTitle: "Refraction of Light through a Glass Slab",
+                notesSubtitle: "Class 10 Physics · Light – Reflection and Refraction",
+                notesHTML: `
+                    <h3 class="text-base font-bold text-slate-900 mb-2">Laws of Refraction</h3>
+                    <p class="text-sm text-slate-600 mb-4">When a ray of light travels obliquely from a rarer medium (air) to a denser medium (glass), it bends towards the normal. Upon exiting into air, it bends away from the normal.</p>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">Snell's Law:</h4>
+                    <p class="text-sm text-slate-600 mb-4">The ratio of the sine of angle of incidence to the sine of angle of refraction is constant for a given pair of media: <strong>sin i / sin r = constant (Refractive Index n)</strong>.</p>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">Lateral Displacement:</h4>
+                    <p class="text-sm text-slate-600 mb-4">The emergent ray is parallel to the incident ray but is shifted sideways by a perpendicular distance known as lateral displacement, which depends on slab thickness, angle of incidence, and refractive index.</p>
+                `,
+                controlsHTML: `
+                    <div class="flex gap-4 w-full flex-wrap sm:flex-nowrap">
+                        <div class="flex-1 flex flex-col gap-1 min-w-[140px]">
+                            <div class="flex justify-between text-xs font-semibold text-slate-600">
+                                <span>Angle of Incidence (i):</span>
+                                <strong id="angleVal" class="text-indigo-600">45°</strong>
+                            </div>
+                            <input type="range" min="20" max="70" value="45" oninput="updateSlabAngle(this.value)" class="accent-indigo-600 cursor-pointer">
+                        </div>
+                        <div class="flex-1 flex flex-col gap-1 min-w-[140px]">
+                            <div class="flex justify-between text-xs font-semibold text-slate-600">
+                                <span>Refractive Index (n):</span>
+                                <strong id="refVal" class="text-indigo-600">1.5</strong>
+                            </div>
+                            <input type="range" min="1.1" max="2.0" value="1.5" step="0.1" oninput="updateSlabRef(this.value)" class="accent-indigo-600 cursor-pointer">
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 2,
+                title: "Electrolysis of Water",
+                badge: "Chemistry",
+                badgeClass: "bg-emerald-50 text-emerald-700",
+                icon: "💧",
+                category: "Chemistry · Chapter 1",
+                instructions: "Turn ON the battery switch to decompose acidified water into Hydrogen and Oxygen gases in 2:1 ratio.",
+                notesTitle: "Electrolysis of Water & Decomposition",
+                notesSubtitle: "Class 10 Chemistry · Chemical Reactions and Equations",
+                notesHTML: `
+                    <h3 class="text-base font-bold text-slate-900 mb-2">Decomposition Reaction</h3>
+                    <p class="text-sm text-slate-600 mb-4">Electrolysis is a decomposition reaction in which electricity is passed through an aqueous electrolyte to break down chemical bonds in water molecules.</p>
+                    <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl font-mono text-xs font-bold text-slate-700 mb-4 text-center">
+                        2H₂O (l) &nbsp;⎯⎯Electricity→&nbsp; 2H₂ (g) + O₂ (g)
+                    </div>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">Key Observations:</h4>
+                    <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1 mb-4">
+                        <li><strong>Cathode (-):</strong> Hydrogen gas (H₂) collects here.</li>
+                        <li><strong>Anode (+):</strong> Oxygen gas (O₂) collects here.</li>
+                        <li><strong>Volume Ratio:</strong> The volume of hydrogen gas collected is double the volume of oxygen gas (2:1) corresponding to water's chemical formula (H₂O).</li>
+                    </ul>
+                `,
+                controlsHTML: `
+                    <div class="flex justify-between items-center w-full flex-wrap gap-3">
+                        <div class="flex gap-2">
+                            <button id="powerBtn" onclick="togglePower()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-sm transition">Turn ON Power</button>
+                            <button onclick="resetElectrolysis()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Reset</button>
+                        </div>
+                        <div class="text-xs font-medium text-slate-600">
+                            H₂ Collected: <strong id="h2Level" class="text-emerald-600">0%</strong> &nbsp;|&nbsp; O₂ Collected: <strong id="o2Level" class="text-rose-600">0%</strong>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 3,
+                title: "pH Scale & Universal Indicators",
+                badge: "Chemistry",
+                badgeClass: "bg-amber-50 text-amber-700",
+                icon: "🧪",
+                category: "Chemistry · Chapter 2",
+                instructions: "Slide the pH value or select common household items to test universal indicator color reactions.",
+                notesTitle: "Acids, Bases, Salts and the pH Scale",
+                notesSubtitle: "Class 10 Chemistry · Acids, Bases and Salts",
+                notesHTML: `
+                    <h3 class="text-base font-bold text-slate-900 mb-2">The pH Scale</h3>
+                    <p class="text-sm text-slate-600 mb-4">A scale for measuring hydrogen ion concentration in a solution. 'p' stands for 'potenz' in German, meaning power.</p>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">pH Range Breakdown:</h4>
+                    <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1 mb-4">
+                        <li><strong>Acidic Solutions (pH &lt; 7):</strong> High H⁺ ion concentration. Turns universal indicator red/orange/yellow (e.g., Lemon juice, Vinegar).</li>
+                        <li><strong>Neutral Solution (pH = 7):</strong> Pure water. Turns green.</li>
+                        <li><strong>Basic Solutions (pH &gt; 7):</strong> High OH⁻ ion concentration. Turns universal indicator blue/purple (e.g., Baking soda, Soap).</li>
+                    </ul>
+                `,
+                controlsHTML: `
+                    <div class="flex flex-col gap-3 w-full">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between text-xs font-semibold text-slate-600">
+                                <span>pH Value:</span>
+                                <strong id="phNum" class="text-amber-600 text-sm">7</strong>
+                            </div>
+                            <input type="range" min="0" max="14" value="7" step="1" oninput="changePH(this.value)" class="accent-amber-600 cursor-pointer">
+                        </div>
+                        <div class="flex gap-2 flex-wrap">
+                            <button onclick="setSubstance('Battery Acid', 1)" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Acid (1)</button>
+                            <button onclick="setSubstance('Lemon Juice', 2)" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Lemon (2)</button>
+                            <button onclick="setSubstance('Pure Water', 7)" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Water (7)</button>
+                            <button onclick="setSubstance('Baking Soda', 9)" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Baking Soda (9)</button>
+                            <button onclick="setSubstance('Bleach', 13)" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Bleach (13)</button>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                id: 4,
+                title: "Human Heart Blood Circulation",
+                badge: "Biology",
+                badgeClass: "bg-rose-50 text-rose-700",
+                icon: "💓",
+                category: "Biology · Chapter 6",
+                instructions: "Start the heart pump to trace deoxygenated blood flow to lungs and oxygenated flow to the body.",
+                notesTitle: "Human Heart & Double Circulation",
+                notesSubtitle: "Class 10 Biology · Life Processes",
+                notesHTML: `
+                    <h3 class="text-base font-bold text-slate-900 mb-2">Structure & Function of Human Heart</h3>
+                    <p class="text-sm text-slate-600 mb-4">The human heart is a muscular organ as big as our fist. It has four chambers—two atria (upper) and two ventricles (lower)—to prevent mixing of oxygenated and deoxygenated blood.</p>
+                    <h4 class="text-sm font-bold text-slate-800 mb-1">Double Circulation System:</h4>
+                    <ul class="list-disc pl-5 text-sm text-slate-600 space-y-1 mb-4">
+                        <li><strong>Pulmonary Circulation:</strong> Right side receives deoxygenated blood from body tissues and pumps it to the lungs for oxygenation.</li>
+                        <li><strong>Systemic Circulation:</strong> Left side receives oxygenated blood from the lungs and pumps it out to the rest of the body.</li>
+                        <li><strong>Efficiency:</strong> Blood passes through the heart twice per complete circuit, ensuring high metabolic oxygen supply in humans.</li>
+                    </ul>
+                `,
+                controlsHTML: `
+                    <div class="flex justify-between items-center w-full flex-wrap gap-3">
+                        <div class="flex gap-2">
+                            <button id="heartBtn" onclick="toggleHeart()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-sm transition">Start Heart Pump</button>
+                            <button onclick="resetHeart()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Reset</button>
+                        </div>
+                        <div class="text-xs font-medium text-slate-600">
+                            Pump Status: <strong id="heartStatus" class="text-rose-600">Paused</strong>
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        let currentTopicIdx = 0;
+        let currentTab = 'sim';
+
+        // Simulation States
+        let magnetState = { mode: 'filings', strength: 2, dragX: 0, dragY: 0, isDragging: false };
+        let slabState = { angle: 45, n: 1.5 };
+        let electrolysisState = { power: false, h2: 0, o2: 0 };
+        let phState = { ph: 7, substance: 'Pure Water' };
+        let heartState = { running: false, phase: 0 };
+
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        let animFrameId = null;
+
+        // Initialize Application
+        function initApp() {
+            renderNav();
+            loadTopic(0);
+            window.addEventListener('resize', handleResize);
+            setupEvents();
+        }
+
+        function handleResize() {
+            resizeCanvas();
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            if (!container) return;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = container.clientWidth * dpr;
+            canvas.height = container.clientHeight * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = container.clientWidth + 'px';
+            canvas.style.height = container.clientHeight + 'px';
+        }
+
+        function renderNav() {
+            const navList = document.getElementById('navList');
+            navList.innerHTML = topics.map((t, idx) => `
+                <button onclick="loadTopic(${idx})" class="w-full text-left p-3 rounded-xl border transition flex items-center space-x-3 ${idx === currentTopicIdx ? 'bg-indigo-50 border-indigo-200 text-indigo-900 shadow-sm' : 'border-transparent hover:bg-slate-50 text-slate-700'}">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center text-base bg-white shadow-xs border border-slate-100 flex-shrink-0">${t.icon}</div>
+                    <div class="overflow-hidden">
+                        <span class="text-[10px] font-bold uppercase tracking-wider block text-slate-400">${t.category}</span>
+                        <h3 class="text-xs font-semibold truncate">${t.title}</h3>
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        function loadTopic(idx) {
+            currentTopicIdx = idx;
+            const t = topics[idx];
+            document.getElementById('mainTitle').innerText = t.title;
+            const badge = document.getElementById('mainBadge');
+            badge.innerText = t.badge;
+            badge.className = `text-xs font-semibold px-2.5 py-1 rounded-full ${t.badgeClass}`;
+            document.getElementById('instructionOverlay').innerText = t.instructions;
+
+            document.getElementById('notesContent').innerHTML = `
+                <h3 class="text-lg font-bold text-slate-900 mb-1">${t.notesTitle}</h3>
+                <p class="text-xs font-medium text-slate-400 uppercase tracking-wider mb-4">${t.notesSubtitle}</p>
+                ${t.notesHTML}
+            `;
+            document.getElementById('controlsBar').innerHTML = t.controlsHTML;
+
+            renderNav();
+            closeDrawerMobile();
+            setTimeout(resizeCanvas, 30);
+            restartLoop();
+        }
+
+        function toggleDrawerMobile() {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            document.getElementById('backdrop').classList.toggle('hidden');
+        }
+
+        function closeDrawerMobile() {
+            document.getElementById('sidebar').classList.add('-translate-x-full');
+            document.getElementById('backdrop').classList.add('hidden');
+        }
+
+        // Tab Switching
+        document.getElementById('simTab').addEventListener('click', () => {
+            currentTab = 'sim';
+            document.getElementById('simTab').className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition";
+            document.getElementById('notesTab').className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition";
+            document.getElementById('simView').classList.remove('hidden');
+            document.getElementById('notesView').classList.add('hidden');
+            setTimeout(resizeCanvas, 30);
+            restartLoop();
+        });
+
+        document.getElementById('notesTab').addEventListener('click', () => {
+            currentTab = 'notes';
+            document.getElementById('notesTab').className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-semibold rounded-lg bg-white text-indigo-600 shadow-sm transition";
+            document.getElementById('simTab').className = "flex-1 sm:flex-initial px-4 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition";
+            document.getElementById('notesView').classList.remove('hidden');
+            document.getElementById('simView').classList.add('hidden');
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+        });
+
+        document.getElementById('menuToggle').addEventListener('click', toggleDrawerMobile);
+        document.getElementById('backdrop').addEventListener('click', closeDrawerMobile);
+        document.getElementById('closeSidebar').addEventListener('click', closeDrawerMobile);
+
+        // Canvas Touch and Drag Setup
+        function setupEvents() {
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            };
+
+            const startDrag = (e) => {
+                const pos = getPos(e);
+                magnetState.dragX = pos.x;
+                magnetState.dragY = pos.y;
+                magnetState.isDragging = true;
+            };
+
+            const moveDrag = (e) => {
+                if (!magnetState.isDragging) return;
+                const pos = getPos(e);
+                magnetState.dragX = pos.x;
+                magnetState.dragY = pos.y;
+            };
+
+            const endDrag = () => { magnetState.isDragging = false; };
+
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', moveDrag);
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrag(e); }, { passive: false });
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); moveDrag(e); }, { passive: false });
+            canvas.addEventListener('touchend', endDrag);
+        }
+
+        function restartLoop() {
+            if (animFrameId) cancelAnimationFrame(animFrameId);
+            animLoop();
+        }
+
+        function animLoop() {
+            if (currentTab !== 'sim') return;
+            const w = canvas.width / (window.devicePixelRatio || 1);
+            const h = canvas.height / (window.devicePixelRatio || 1);
+            ctx.clearRect(0, 0, w, h);
+
+            if (currentTopicIdx === 0) renderBarMagnet(w, h);
+            else if (currentTopicIdx === 1) renderGlassSlab(w, h);
+            else if (currentTopicIdx === 2) renderElectrolysis(w, h);
+            else if (currentTopicIdx === 3) renderPH(w, h);
+            else if (currentTopicIdx === 4) renderHeartSim(w, h);
+
+            animFrameId = requestAnimationFrame(animLoop);
+        }
+
+        // --- SIMULATION RENDERERS ---
+
+        function renderBarMagnet(w, h) {
+            const cx = w / 2, cy = h / 2;
+            const mw = Math.min(180, w * 0.45) * (magnetState.strength * 0.25 + 0.75);
+            const mh = 48;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            // South Pole (Blue)
+            ctx.fillStyle = '#3b82f6';
+            ctx.fillRect(-mw/2, -mh/2, mw/2, mh);
+            // North Pole (Red)
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(0, -mh/2, mw/2, mh);
+
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 15px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('N', mw/4, 0);
+            ctx.fillText('S', -mw/4, 0);
+            ctx.restore();
+
+            if (magnetState.mode === 'filings') {
+                ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+                ctx.lineWidth = 1.5;
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+                    ctx.beginPath();
+                    ctx.moveTo(cx + mw/4, cy);
+                    ctx.bezierCurveTo(cx + mw/2 + 80, cy - 110 * Math.sin(a), cx - mw/2 - 80, cy - 110 * Math.sin(a), cx - mw/4, cy);
+                    ctx.stroke();
+                }
+                ctx.fillStyle = '#64748b';
+                for (let i = 0; i < 140; i++) {
+                    let rx = cx + (Math.random() - 0.5) * (w * 0.85);
+                    let ry = cy + (Math.random() - 0.5) * (h * 0.8);
+                    if (Math.abs(rx - cx) > mw/2 || Math.abs(ry - cy) > mh/2) {
+                        ctx.fillRect(rx, ry, 2, 2);
+                    }
+                }
+            } else {
+                let compX = magnetState.isDragging ? magnetState.dragX : cx + 90;
+                let compY = magnetState.isDragging ? magnetState.dragY : cy - 60;
+                let dx = compX - cx, dy = compY - cy;
+                let angle = Math.atan2(dy, dx) + Math.PI/2;
+
+                ctx.beginPath();
+                ctx.arc(compX, compY, 22, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.save();
+                ctx.translate(compX, compY);
+                ctx.rotate(angle);
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(4, 0); ctx.lineTo(-4, 0); ctx.fill();
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath(); ctx.moveTo(0, 16); ctx.lineTo(4, 0); ctx.lineTo(-4, 0); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function renderGlassSlab(w, h) {
+            const cx = w / 2, cy = h / 2;
+            const sw = Math.min(260, w * 0.7);
+            const sh = Math.min(130, h * 0.45);
+
+            // Glass Slab Body
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+            ctx.strokeStyle = '#0ea5e9';
+            ctx.lineWidth = 2;
+            ctx.fillRect(cx - sw/2, cy - sh/2, sw, sh);
+            ctx.strokeRect(cx - sw/2, cy - sh/2, sw, sh);
+
+            let iRad = slabState.angle * (Math.PI / 180);
+            let rRad = Math.asin(Math.sin(iRad) / slabState.n);
+            let entryX = cx - sw/2, entryY = cy;
+            let rayLen = Math.min(110, w * 0.22);
+            let startX = entryX - rayLen * Math.cos(iRad);
+            let startY = entryY - rayLen * Math.sin(iRad);
+
+            // Incident Ray (Red)
+            ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(entryX, entryY); ctx.stroke();
+
+            // Refracted Ray inside slab (Yellow)
+            let exitX = entryX + sw;
+            let exitY = entryY + sw * Math.tan(rRad);
+            ctx.strokeStyle = '#eab308';
+            ctx.beginPath(); ctx.moveTo(entryX, entryY); ctx.lineTo(exitX, exitY); ctx.stroke();
+
+            // Emergent Ray (Green)
+            let endX = exitX + rayLen * Math.cos(iRad);
+            let endY = exitY + rayLen * Math.sin(iRad);
+            ctx.strokeStyle = '#22c55e';
+            ctx.beginPath(); ctx.moveTo(exitX, exitY); ctx.lineTo(endX, endY); ctx.stroke();
+
+            // Normal Dashed Lines
+            ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5; ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(entryX, entryY - 60); ctx.lineTo(entryX, entryY + 60);
+            ctx.moveTo(exitX, exitY - 60); ctx.lineTo(exitX, exitY + 60);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function renderElectrolysis(w, h) {
+            const cx = w / 2, cy = h / 2;
+            // Beaker
+            ctx.strokeStyle = '#64748b'; ctx.lineWidth = 3;
+            ctx.strokeRect(cx - 110, cy - 65, 220, 140);
+
+            // Water electrolyte level
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+            ctx.fillRect(cx - 108, cy - 20, 216, 93);
+
+            // Test tubes
+            ctx.strokeRect(cx - 70, cy - 95, 38, 110);
+            ctx.strokeRect(cx + 32, cy - 95, 38, 110);
+
+            if (electrolysisState.power) {
+                if (electrolysisState.h2 < 100) electrolysisState.h2 += 0.4;
+                if (electrolysisState.o2 < 50) electrolysisState.o2 += 0.2;
+
+                document.getElementById('h2Level').innerText = Math.min(100, Math.round(electrolysisState.h2)) + '%';
+                document.getElementById('o2Level').innerText = Math.min(100, Math.round(electrolysisState.o2 * 2)) + '%';
+
+                let h2H = (electrolysisState.h2 / 100) * 75;
+                ctx.fillStyle = 'rgba(16, 185, 129, 0.55)';
+                ctx.fillRect(cx - 68, (cy - 93) + (75 - h2H), 34, h2H);
+
+                let o2H = (electrolysisState.o2 / 50) * 75;
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.55)';
+                ctx.fillRect(cx + 34, (cy - 93) + (75 - o2H), 34, o2H);
+            }
+
+            // Electrodes
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(cx - 55, cy + 10, 10, 35);
+            ctx.fillRect(cx + 45, cy + 10, 10, 35);
+        }
+
+        function renderPH(w, h) {
+            const cx = w / 2, cy = h / 2;
+            const bw = Math.min(380, w * 0.8), bh = 40;
+            const bx = cx - bw / 2, by = cy - 60;
+
+            // pH Gradient Bar
+            const grad = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+            grad.addColorStop(0, '#dc2626');
+            grad.addColorStop(0.2, '#ea580c');
+            grad.addColorStop(0.4, '#ca8a04');
+            grad.addColorStop(0.5, '#16a34a');
+            grad.addColorStop(0.7, '#0284c7');
+            grad.addColorStop(1, '#9333ea');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(bx, by, bw, bh);
+            ctx.strokeStyle = '#334155'; ctx.lineWidth = 2;
+            ctx.strokeRect(bx, by, bw, bh);
+
+            let px = bx + (phState.ph / 14) * bw;
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath(); ctx.moveTo(px, by - 10); ctx.lineTo(px - 7, by); ctx.lineTo(px + 7, by); ctx.fill();
+
+            // Indicator Beaker
+            ctx.fillStyle = getPHColor(phState.ph);
+            ctx.fillRect(cx - 55, cy + 18, 110, 85);
+            ctx.strokeStyle = '#475569'; ctx.lineWidth = 2.5;
+            ctx.strokeRect(cx - 55, cy + 18, 110, 85);
+
+            ctx.fillStyle = '#1e293b';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(phState.substance, cx, cy + 125);
+        }
+
+        function getPHColor(ph) {
+            if (ph <= 2) return 'rgba(220, 38, 38, 0.75)';
+            if (ph <= 5) return 'rgba(202, 138, 4, 0.75)';
+            if (ph === 7) return 'rgba(22, 163, 74, 0.75)';
+            if (ph <= 10) return 'rgba(2, 132, 199, 0.75)';
+            return 'rgba(147, 51, 234, 0.75)';
+        }
+
+        function renderHeartSim(w, h) {
+            const cx = w / 2, cy = h / 2;
+            if (heartState.running) heartState.phase += 0.06;
+            let pulse = 1 + 0.035 * Math.sin(heartState.phase * 4);
+
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(pulse, pulse);
+
+            // Heart Chambers
+            ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(-38, -20, 34, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#f87171'; ctx.beginPath(); ctx.arc(38, -20, 34, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#0284c7'; ctx.beginPath(); ctx.arc(-38, 28, 38, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(38, 28, 38, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = 'white'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('Right Atrium', -38, -20);
+            ctx.fillText('Left Atrium', 38, -20);
+            ctx.fillText('Right Vent.', -38, 28);
+            ctx.fillText('Left Vent.', 38, 28);
+            ctx.restore();
+        }
+
+        // Control Handlers
+        function setMagnetMode(m) {
+            magnetState.mode = m;
+            document.getElementById('btnFilings').className = m === 'filings' ? 'px-3 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-sm transition' : 'px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+            document.getElementById('btnCompass').className = m === 'compass' ? 'px-3 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-sm transition' : 'px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+        }
+
+        function changeMagnetStrength(v) {
+            magnetState.strength = parseInt(v);
+            document.getElementById('strengthLabel').innerText = ["Weak", "Normal", "Strong"][v-1];
+        }
+
+        function updateSlabAngle(v) {
+            slabState.angle = parseInt(v);
+            document.getElementById('angleVal').innerText = v + '°';
+        }
+
+        function updateSlabRef(v) {
+            slabState.n = parseFloat(v);
+            document.getElementById('refVal').innerText = v;
+        }
+
+        function togglePower() {
+            electrolysisState.power = !electrolysisState.power;
+            const btn = document.getElementById('powerBtn');
+            btn.innerText = electrolysisState.power ? "Turn OFF Power" : "Turn ON Power";
+            btn.className = electrolysisState.power ? "px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 text-white shadow-sm transition" : "px-4 py-2 text-xs font-semibold rounded-xl bg-indigo-600 text-white shadow-sm transition";
+        }
+
+        function resetElectrolysis() {
+            electrolysisState.h2 = 0;
+            electrolysisState.o2 = 0;
+        }
+
+        function changePH(v) {
+            phState.ph = parseInt(v);
+            document.getElementById('phNum').innerText = v;
+            phState.substance = `pH ${v} Solution`;
+        }
+
+        function setSubstance(name, ph) {
+            phState.ph = ph;
+            phState.substance = name;
+            document.getElementById('phNum').innerText = ph;
+        }
+
+        function toggleHeart() {
+            heartState.running = !heartState.running;
+            const btn = document.getElementById('heartBtn');
+            const status = document.getElementById('heartStatus');
+            btn.innerText = heartState.running ? "Pause Pump" : "Start Heart Pump";
+            status.innerText = heartState.running ? "Pumping Blood" : "Paused";
+            status.className = heartState.running ? "text-emerald-600" : "text-rose-600";
+        }
+
+        function resetHeart() {
+            heartState.running = false;
+            heartState.phase = 0;
+            document.getElementById('heartBtn').innerText = "Start Heart Pump";
+            document.getElementById('heartStatus').innerText = "Paused";
+            document.getElementById('heartStatus').className = "text-rose-600";
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
