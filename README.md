@@ -1,4 +1,4 @@
-# 🔬 Class 10 Science Virtual Lab
+# 🔬 Science Virtual Lab
 
 > Interactive simulations and concept notes for Class 10 Physics, Chemistry and Biology.
 
